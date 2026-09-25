@@ -50,5 +50,38 @@ Stack: Nuxt + TypeScript + SQLite (geometry lưu GeoJSON; SpatiaLite nếu cần
   4. Không làm: L2/L3, upload ảnh để AI nhận dạng, gọi GEE realtime từ web.
 - **Timeline gợi ý**: Tuần 1–2 Phase 0 (tài liệu, GEE thử nghiệm, problem statement) · Tuần 3–6 thí nghiệm L1 + export · Tuần 5–10 web app · Tuần 11–12 đánh giá, viết báo cáo, deploy.
 
+## 7. Ý tưởng mới: màn hình "Explore" với bản đồ xám, hover để hiện màu loài
+Mô tả: bản đồ/ảnh dải ven biển hiển thị grayscale. Khi hover vào một vùng nhỏ, vùng đó hiện màu của loài và một popover thông tin xuất hiện gần con trỏ.
+
+**Câu hỏi then chốt: màu loài của từng vùng lấy từ đâu?** Mục 2 đã kết luận vệ tinh không cho ra được loài (L3). Vì vậy vùng màu phải đến từ một trong hai nguồn:
+- (A) **Dữ liệu thật**: polygon khoanh vẽ thủ công từ ảnh flycam hoặc điểm thực địa của giảng viên. Chỉ làm được nếu ảnh có tọa độ.
+- (B) **Mô phỏng mang tính giáo dục**: sơ đồ phân tầng sinh thái (zonation) theo tài liệu, ví dụ loài tiên phong phía biển, rồi vùng giữa, rồi vùng phía đất liền. Không gắn tọa độ thật.
+- Rủi ro học thuật: nếu trình bày (B) như bản đồ thật thì là **sai lệch dữ liệu**. Bắt buộc gắn nhãn "Minh họa" và trích nguồn.
+
+**Đề xuất ban đầu** (đã được thay bằng mục 7.1): MVP làm (B) dưới dạng SVG tương tác.
+
+**Ghi chú UX/kỹ thuật**
+- Dùng **popover/tooltip**, không dùng modal (modal chặn thao tác). Đặt lệch khỏi con trỏ, tự đổi phía khi gần mép màn hình.
+- Mobile không có hover: tap để mở, tap ra ngoài để đóng.
+- Cần thêm **legend + nút "hiện tất cả màu"**. Nếu chỉ hover thì người dùng không thấy được bức tranh phân bố tổng thể.
+- Accessibility: điều hướng được bằng bàn phím (focus = hover), palette an toàn với người mù màu, không chỉ dựa vào màu.
+- (A): basemap raster áp CSS `grayscale`, polygon `fill-opacity: 0`, đổi thành màu khi hover qua `feature-state`, popup từ properties `species_id`.
+- Dữ liệu: bảng `species` (SQLite) + file `zones.geojson`/SVG gồm các vùng có `species_id`. Popover lấy thông tin qua API `/api/species/:id`.
+
+### 7.1 Cập nhật: người dùng cần độ chân thực, nhìn từ trên cao, dạng "2D nổi" (2.5D)
+Độ chân thực gồm 2 lớp, mỗi lớp cần nguồn dữ liệu riêng:
+1. **Địa hình (đường bờ, đầm phá, sông, cồn cát)**: lấy từ dữ liệu thật. Dùng OpenStreetMap (ODbL, cần attribution) và ảnh Sentinel-2. **Không vẽ lại (trace) từ Google Earth** vì vi phạm điều khoản sử dụng.
+2. **Vùng loài**: chỉ "thật" khi có dữ liệu có tọa độ (ảnh flycam hoặc GPS của giảng viên). Trong lúc chờ thì dùng *demo data*, gắn nhãn rõ ràng. Tuyệt đối không trình bày vùng giả định như dữ liệu thật.
+
+**Lựa chọn công nghệ (đề xuất)**: **MapLibre GL JS**, không dùng Three.js ở MVP.
+- Có sẵn tọa độ thật, zoom/pan, hover/popup, tile raster (Sentinel-2 grayscale), hillshade từ DEM (Copernicus GLO-30) và `fill-extrusion` cho hiệu ứng "nổi". Sau này thay demo zones bằng dữ liệu thật mà không phải viết lại.
+- Three.js: đẹp và "wow" hơn, nhưng phải tự làm projection, raycasting để hover, và tối ưu hiệu năng. Tốn ước tính 3–4 tuần trong quỹ 12 tuần. Để lại làm stretch goal.
+- SVG: nhẹ nhưng khó giữ độ chân thực theo tọa độ thật.
+- Lưu ý: vùng ven biển Huế gần như **phẳng**, nên hiệu ứng nổi từ DEM rất yếu. Cảm giác "nổi" chủ yếu đến từ extrusion tán cây (chiều cao ước lượng theo loài). Nếu phóng đại chiều cao thì phải ghi chú là đã phóng đại.
+
+**Cấu trúc layer**: basemap Sentinel-2 grayscale → hillshade → `mangrove_extent` (kết quả L1, dữ liệu thật) → `species_zones` (fill-extrusion, màu xám, hover bật màu loài qua `feature-state`) → popover (component Vue, bám theo con trỏ).
+
+**Việc cần làm trước khi code màn hình này**: hỏi giảng viên về tọa độ và orthomosaic; chọn 1 khu thử nghiệm nhỏ (vd. Rú Chá); dựng prototype tĩnh 1 trang để thử cảm giác UX.
+
 ## Verification (cho giai đoạn đánh giá)
 Khả thi được xác nhận khi: (a) có số liệu diện tích/loài có trích dẫn, (b) GEE cho thấy đủ ảnh sạch và extent nhìn thấy được ở 10 m, (c) có nguồn nhãn để đánh giá độ chính xác L1.
