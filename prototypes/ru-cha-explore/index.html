@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rú Chá Explore</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <style>
+    :root {
+      --panel-bg: rgba(20, 24, 22, 0.88);
+      --panel-fg: #eef2ef;
+      --muted: #a9b3ad;
+      --accent: #7fd1ae;
+      --warn-bg: #5c3b00;
+      --warn-fg: #ffe2a8;
+      --radius: 10px;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #1b1f1d; color: var(--panel-fg);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    #map { position: absolute; inset: 0; }
+
+    .demo-banner {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 3;
+      background: var(--warn-bg); color: var(--warn-fg); padding: 6px 14px; border-radius: 999px;
+      font-size: 13px; font-weight: 600; box-shadow: var(--shadow); max-width: calc(100% - 32px); text-align: center;
+    }
+
+    .panel {
+      position: absolute; top: 56px; left: 16px; z-index: 2; width: 280px; max-width: calc(100% - 32px);
+      background: var(--panel-bg); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow);
+      backdrop-filter: blur(6px);
+    }
+    .panel h1 { font-size: 16px; margin: 0 0 2px; }
+    .panel .sub { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+    .panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
+    .legend { list-style: none; margin: 0; padding: 0; }
+    .legend button {
+      width: 100%; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid transparent;
+      background: transparent; color: inherit; border-radius: 6px; cursor: pointer; text-align: left; font: inherit; font-size: 14px;
+    }
+    .legend button:hover, .legend button:focus-visible, .legend button[aria-pressed="true"] {
+      background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.18); outline: none;
+    }
+    .swatch { width: 14px; height: 14px; border-radius: 3px; flex: none; border: 1px solid rgba(255,255,255,.4); }
+    .legend .sci { color: var(--muted); font-style: italic; font-size: 12px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; margin: 6px 0; }
+    .row input[type="range"] { width: 120px; }
+    .seg { display: flex; gap: 4px; }
+    .seg button {
+      flex: 1; padding: 5px 6px; font: inherit; font-size: 12px; color: inherit; background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.18); border-radius: 6px; cursor: pointer;
+    }
+    .seg button[aria-pressed="true"] { background: var(--accent); color: #0d2119; border-color: var(--accent); font-weight: 600; }
+    .note { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.4; }
+
+    .popover {
+      position: absolute; z-index: 4; width: 260px; max-width: calc(100vw - 32px); pointer-events: none;
+      background: #fbfcfb; color: #16201b; border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 12px 14px; font-size: 13px; line-height: 1.45; opacity: 0; transform: translateY(4px);
+      transition: opacity .12s ease, transform .12s ease;
+    }
+    .popover.visible { opacity: 1; transform: translateY(0); }
+    .popover.pinned { pointer-events: auto; }
+    .popover .head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .popover .name { font-weight: 700; font-size: 15px; }
+    .popover .sci { font-style: italic; color: #4a5a52; }
+    .popover dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 8px 0; }
+    .popover dt { color: #5d6b64; }
+    .popover dd { margin: 0; }
+    .popover .flag { margin-top: 8px; font-size: 11px; color: #8a5a00; background: #fff4dc; padding: 4px 6px; border-radius: 4px; }
+
+    .toast {
+      position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); z-index: 4;
+      background: var(--panel-bg); padding: 8px 12px; border-radius: 8px; font-size: 13px; display: none;
+    }
+    .error { position: absolute; inset: 0; display: none; place-items: center; padding: 24px; text-align: center; z-index: 5; }
+
+    @media (max-width: 640px) {
+      .panel { top: auto; bottom: 28px; left: 16px; right: 16px; width: auto; max-height: 45vh; overflow: auto; }
+      .demo-banner { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="map" role="application" aria-label="Bản đồ 2.5D khu Rú Chá"></div>
+  <div class="demo-banner">DEMO DATA — vị trí và vùng loài là giả lập, chưa phải dữ liệu khảo sát</div>
+
+  <aside class="panel" aria-label="Điều khiển bản đồ">
+    <h1>Rú Chá · Hương Phong, Huế</h1>
+    <p class="sub">Di chuột (hoặc chạm) vào từng khóm cây để xem loài.</p>
+
+    <h2>Loài</h2>
+    <ul class="legend" id="legend"></ul>
+
+    <h2>Hiển thị</h2>
+    <label class="row">Hiện tất cả màu <input type="checkbox" id="showAll" /></label>
+    <label class="row">Phóng đại chiều cao <span><input type="range" id="exaggeration" min="1" max="5" step="0.5" value="2" /> <span id="exaggerationValue">×2</span></span></label>
+    <div class="row">Nền ảnh</div>
+    <div class="seg" role="group" aria-label="Nền ảnh">
+      <button type="button" data-basemap="esri" aria-pressed="true">Esri (chi tiết)</button>
+      <button type="button" data-basemap="s2" aria-pressed="false">Sentinel-2</button>
+    </div>
+    <p class="note">
+      Chiều cao khối = chiều cao cây ước lượng × hệ số phóng đại.
+      Chuột phải (hoặc nhấn giữ) để xem tọa độ, dùng để hiệu chỉnh vị trí thật.
+    </p>
+  </aside>
+
+  <div class="popover" id="popover" role="tooltip" aria-live="polite"></div>
+  <div class="toast" id="toast"></div>
+  <div class="error" id="error"></div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script>
+    // Species reference data. Will later come from SQLite via /api/species/:id.
+    // All entries are placeholders pending confirmation by the lecturer.
+    const SPECIES = {
+      excoecaria: {
+        name: 'Giá (Chà)', scientific: 'Excoecaria agallocha', family: 'Euphorbiaceae',
+        color: '#009E73', height: 6, zone: 'Giữa',
+        description: 'Cây gỗ nhỏ, nhựa mủ trắng gây kích ứng da và mắt. Được cho là loài đặt tên cho "Rú Chá".',
+      },
+      acanthus: {
+        name: 'Ô rô', scientific: 'Acanthus ilicifolius', family: 'Acanthaceae',
+        color: '#E69F00', height: 1.5, zone: 'Sát mép nước',
+        description: 'Cây bụi thấp, lá có gai ở mép, hoa màu tím nhạt.',
+      },
+      pandanus: {
+        name: 'Dứa dại', scientific: 'Pandanus tectorius', family: 'Pandanaceae',
+        color: '#56B4E9', height: 3.5, zone: 'Phía đất liền',
+        description: 'Thân có rễ chống, lá dài xếp xoắn, mép lá có gai.',
+      },
+      derris: {
+        name: 'Cóc kèn', scientific: 'Derris trifoliata', family: 'Fabaceae',
+        color: '#CC79A7', height: 2.5, zone: 'Rải rác, leo bám',
+        description: 'Dây leo thân gỗ, lá kép lông chim, thường leo lên tán cây khác.',
+      },
+    };
+
+    // Approximate location, NOT verified. Override with ?center=lng,lat&bearing=deg.
+    const params = new URLSearchParams(location.search);
+    const DEFAULT_CENTER = [107.5935, 16.5485];
+    const CENTER = (params.get('center') || '').split(',').map(Number).filter(Number.isFinite).length === 2
+      ? params.get('center').split(',').map(Number)
+      : DEFAULT_CENTER;
+    const ZONATION_BEARING = Number(params.get('bearing')) || 0; // direction from water to land, degrees
+
+    // Deterministic RNG so the demo layout is the same on every load.
+    function mulberry32(seed) {
+      return function () {
+        seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function offsetMeters([lng, lat], dx, dy) {
+      const mPerDegLat = 111320;
+      const mPerDegLng = 111320 * Math.cos((lat * Math.PI) / 180);
+      return [lng + dx / mPerDegLng, lat + dy / mPerDegLat];
+    }
+
+    function pickSpecies(t, rnd) {
+      // t in [-1, 1]: -1 = water side, 1 = land side. Zonation with noise.
+      if (rnd() < 0.12) return 'derris';
+      const n = t + (rnd() - 0.5) * 0.6;
+      if (n < -0.45) return 'acanthus';
+      if (n < 0.45) return 'excoecaria';
+      return 'pandanus';
+    }
+
+    function blob(center, radius, rnd) {
+      const phase = rnd() * Math.PI * 2;
+      const lobes = 2 + Math.floor(rnd() * 3);
+      const ring = [];
+      const steps = 14;
+      for (let k = 0; k < steps; k++) {
+        const a = (k / steps) * Math.PI * 2;
+        const r = radius * (1 + 0.22 * Math.sin(lobes * a + phase) + (rnd() - 0.5) * 0.18);
+        ring.push(offsetMeters(center, Math.cos(a) * r, Math.sin(a) * r));
+      }
+      ring.push(ring[0]);
+      return ring;
+    }
+
+    function buildDemoZones() {
+      const rnd = mulberry32(20260925);
+      const features = [];
+      const spacing = 22;
+      const rot = (ZONATION_BEARING * Math.PI) / 180;
+      let id = 0;
+      for (let i = -7; i <= 7; i++) {
+        for (let j = -4; j <= 4; j++) {
+          if (rnd() < 0.18) continue; // gaps: channels, clearings
+          const ex = i * spacing + (rnd() - 0.5) * spacing * 0.6;
+          const ey = j * spacing + (rnd() - 0.5) * spacing * 0.6;
+          const x = ex * Math.cos(rot) - ey * Math.sin(rot);
+          const y = ex * Math.sin(rot) + ey * Math.cos(rot);
+          const t = ey / (4 * spacing);
+          const species = pickSpecies(t, rnd);
+          const base = SPECIES[species];
+          const height = +(base.height * (0.75 + rnd() * 0.5)).toFixed(1);
+          const radius = 8 + rnd() * 5;
+          const shade = Math.round(120 + rnd() * 60);
+          features.push({
+            type: 'Feature',
+            id: id++,
+            properties: {
+              species,
+              color: base.color,
+              gray: `rgb(${shade},${shade},${shade})`,
+              height,
+              area_m2: Math.round(Math.PI * radius * radius),
+            },
+            geometry: { type: 'Polygon', coordinates: [blob(offsetMeters(CENTER, x, y), radius, rnd)] },
+          });
+        }
+      }
+      return { type: 'FeatureCollection', features };
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'grid';
+    }
+
+    if (typeof maplibregl === 'undefined') {
+      showError('Không tải được MapLibre GL JS. Kiểm tra kết nối mạng rồi tải lại trang.');
+    } else {
+      init();
+    }
+
+    function init() {
+      const zones = buildDemoZones();
+      const state = { litSpecies: [], showAll: false, exaggeration: 2, hoveredId: null, pinned: false };
+
+      const map = new maplibregl.Map({
+        container: 'map',
+        center: CENTER,
+        zoom: 17.2,
+        pitch: 55,
+        bearing: -20,
+        maxPitch: 70,
+        antialias: true,
+        style: {
+          version: 8,
+          sources: {
+            esri: {
+              type: 'raster', tileSize: 256, maxzoom: 19,
+              tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+              attribution: 'Imagery © Esri, Maxar, Earthstar Geographics',
+            },
+            s2: {
+              type: 'raster', tileSize: 256, maxzoom: 15,
+              tiles: ['https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg'],
+              attribution: 'Sentinel-2 cloudless 2020 by <a href="https://s2maps.eu">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2020)',
+            },
+            zones: { type: 'geojson', data: zones },
+          },
+          layers: [
+            { id: 'background', type: 'background', paint: { 'background-color': '#2a2f2c' } },
+            // raster-saturation -1 turns the imagery grayscale.
+            { id: 'basemap-esri', type: 'raster', source: 'esri',
+              paint: { 'raster-saturation': -1, 'raster-contrast': 0.15, 'raster-brightness-max': 0.85 } },
+            { id: 'basemap-s2', type: 'raster', source: 's2', layout: { visibility: 'none' },
+              paint: { 'raster-saturation': -1, 'raster-contrast': 0.15, 'raster-brightness-max': 0.85 } },
+            { id: 'zones-3d', type: 'fill-extrusion', source: 'zones',
+              paint: {
+                'fill-extrusion-color': colorExpression(state),
+                'fill-extrusion-height': heightExpression(state.exaggeration),
+                'fill-extrusion-base': 0,
+                'fill-extrusion-opacity': 0.92,
+                'fill-extrusion-vertical-gradient': true,
+              } },
+          ],
+        },
+      });
+
+      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+      map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+
+      function colorExpression(s) {
+        const lit = s.showAll ? Object.keys(SPECIES) : s.litSpecies;
+        return ['case',
+          ['boolean', ['feature-state', 'hover'], false], ['get', 'color'],
+          ['in', ['get', 'species'], ['literal', lit]], ['get', 'color'],
+          ['get', 'gray']];
+      }
+      function heightExpression(k) {
+        return ['*', ['get', 'height'], k];
+      }
+      function refreshColors() {
+        map.setPaintProperty('zones-3d', 'fill-extrusion-color', colorExpression(state));
+      }
+
+      // --- Popover ---------------------------------------------------------
+      const popover = document.getElementById('popover');
+      function renderPopover(props) {
+        const sp = SPECIES[props.species];
+        popover.innerHTML = `
+          <div class="head"><span class="swatch" style="background:${sp.color}"></span>
+            <span class="name">${sp.name}</span></div>
+          <div class="sci">${sp.scientific} · ${sp.family}</div>
+          <dl>
+            <dt>Chiều cao</dt><dd>≈ ${props.height} m (khóm này)</dd>
+            <dt>Diện tích</dt><dd>≈ ${props.area_m2} m²</dd>
+            <dt>Vị trí</dt><dd>${sp.zone}</dd>
+          </dl>
+          <div>${sp.description}</div>
+          <div class="flag">Thông tin loài & vùng phân bố: DEMO, cần giảng viên xác nhận.</div>`;
+      }
+      function placePopover(point) {
+        const pad = 16, offset = 18;
+        const rect = map.getContainer().getBoundingClientRect();
+        const w = popover.offsetWidth, h = popover.offsetHeight;
+        let x = point.x + offset, y = point.y - h - offset;
+        if (x + w > rect.width - pad) x = point.x - w - offset; // flip left
+        if (y < pad) y = point.y + offset;                      // flip below
+        x = Math.max(pad, Math.min(x, rect.width - w - pad));
+        y = Math.max(pad, Math.min(y, rect.height - h - pad));
+        popover.style.left = `${x}px`;
+        popover.style.top = `${y}px`;
+      }
+      function setHover(id) {
+        if (state.hoveredId === id) return;
+        if (state.hoveredId !== null) map.setFeatureState({ source: 'zones', id: state.hoveredId }, { hover: false });
+        state.hoveredId = id;
+        if (id !== null) map.setFeatureState({ source: 'zones', id }, { hover: true });
+      }
+      function hidePopover() {
+        popover.classList.remove('visible', 'pinned');
+        state.pinned = false;
+        setHover(null);
+      }
+
+      const canHover = window.matchMedia('(hover: hover)').matches;
+
+      map.on('mousemove', 'zones-3d', (e) => {
+        if (!canHover || state.pinned) return;
+        const f = e.features[0];
+        map.getCanvas().style.cursor = 'pointer';
+        setHover(f.id);
+        renderPopover(f.properties);
+        popover.classList.add('visible');
+        placePopover(e.point);
+      });
+      map.on('mouseleave', 'zones-3d', () => {
+        if (!canHover || state.pinned) return;
+        map.getCanvas().style.cursor = '';
+        hidePopover();
+      });
+
+      // Tap / click pins the popover (needed on touch devices).
+      map.on('click', (e) => {
+        const f = map.queryRenderedFeatures(e.point, { layers: ['zones-3d'] })[0];
+        if (!f) { hidePopover(); return; }
+        setHover(f.id);
+        renderPopover(f.properties);
+        popover.classList.add('visible', 'pinned');
+        state.pinned = true;
+        placePopover(e.point);
+      });
+      map.on('movestart', () => { if (state.pinned) hidePopover(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hidePopover(); });
+
+      // --- Legend ----------------------------------------------------------
+      const legend = document.getElementById('legend');
+      for (const [key, sp] of Object.entries(SPECIES)) {
+        const count = zones.features.filter((f) => f.properties.species === key).length;
+        const li = document.createElement('li');
+        li.innerHTML = `<button type="button" aria-pressed="false" data-species="${key}">
+          <span class="swatch" style="background:${sp.color}"></span>
+          <span><span>${sp.name}</span> <span class="sci">${sp.scientific}</span></span>
+          <span class="sci" style="margin-left:auto">${count}</span></button>`;
+        legend.appendChild(li);
+      }
+      const pressed = new Set();
+      function updateLit(preview) {
+        state.litSpecies = [...new Set([...pressed, ...(preview ? [preview] : [])])];
+        refreshColors();
+      }
+      legend.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-species]');
+        if (!btn) return;
+        const key = btn.dataset.species;
+        pressed.has(key) ? pressed.delete(key) : pressed.add(key);
+        btn.setAttribute('aria-pressed', String(pressed.has(key)));
+        updateLit();
+      });
+      for (const evt of ['mouseover', 'focusin']) {
+        legend.addEventListener(evt, (e) => {
+          const btn = e.target.closest('button[data-species]');
+          if (btn) updateLit(btn.dataset.species);
+        });
+      }
+      for (const evt of ['mouseleave', 'focusout']) legend.addEventListener(evt, () => updateLit());
+
+      // --- Controls --------------------------------------------------------
+      document.getElementById('showAll').addEventListener('change', (e) => {
+        state.showAll = e.target.checked;
+        refreshColors();
+      });
+      const exInput = document.getElementById('exaggeration');
+      exInput.addEventListener('input', () => {
+        state.exaggeration = Number(exInput.value);
+        document.getElementById('exaggerationValue').textContent = `×${state.exaggeration}`;
+        map.setPaintProperty('zones-3d', 'fill-extrusion-height', heightExpression(state.exaggeration));
+      });
+      document.querySelectorAll('[data-basemap]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.basemap;
+          document.querySelectorAll('[data-basemap]').forEach((b) =>
+            b.setAttribute('aria-pressed', String(b === btn)));
+          map.setLayoutProperty('basemap-esri', 'visibility', target === 'esri' ? 'visible' : 'none');
+          map.setLayoutProperty('basemap-s2', 'visibility', target === 's2' ? 'visible' : 'none');
+        });
+      });
+
+      // Right-click / long-press shows coordinates, used to calibrate CENTER.
+      const toast = document.getElementById('toast');
+      map.on('contextmenu', (e) => {
+        const txt = `${e.lngLat.lng.toFixed(5)},${e.lngLat.lat.toFixed(5)}`;
+        toast.textContent = `Tọa độ: ${txt}  (dùng ?center=${txt})`;
+        toast.style.display = 'block';
+        navigator.clipboard?.writeText(txt).catch(() => {});
+        clearTimeout(toast._t);
+        toast._t = setTimeout(() => { toast.style.display = 'none'; }, 5000);
+      });
+
+      window.__explore = { map, zones, state }; // for debugging in the console
+    }
+  </script>
+</body>
+</html>
