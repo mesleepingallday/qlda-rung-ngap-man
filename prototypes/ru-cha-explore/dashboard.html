@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rú Chá Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <style>
+    /* ---------------------------------------------------------------------
+       Design tokens
+       ------------------------------------------------------------------- */
+    :root {
+      /* Neutral ramp */
+      --n-0: #ffffff; --n-50: #f6f7f5; --n-100: #eceee9; --n-200: #d9ddd6; --n-300: #b9bfb5;
+      --n-500: #7c857a; --n-700: #465046; --n-900: #1c231d;
+      /* Surfaces & text */
+      --bg: var(--n-50); --surface: var(--n-0); --surface-2: var(--n-100); --border: var(--n-200);
+      --text: var(--n-900); --text-muted: #5f6a60; --focus: #2f7d5b;
+      /* Map palette (read by JS) */
+      --map-land: #e9e6dc; --map-water: #b9d3dd; --map-water-edge: #8fb3c2; --map-sand: #efe3c4;
+      --map-wetland: #d7e2cf; --map-green: #dfe6d3; --map-residential: #e3dfd6; --map-road: #ffffff;
+      --map-road-casing: #c9c4b7; --map-building: #cfc9bd; --map-tide: #4a90b8;
+      --patch-gray-lo: #8e958c; --patch-gray-hi: #b4bab1; --patch-dim: #d4d8d1; --patch-ground: #9c8a6a;
+      /* Species (Okabe-Ito, colour-blind safe) */
+      --sp-excoecaria: #009E73; --sp-acanthus: #E69F00; --sp-pandanus: #56B4E9; --sp-derris: #CC79A7;
+      /* Status */
+      --warn-bg: #fff3d6; --warn-fg: #7a4d00; --ok-bg: #e2f3ea; --ok-fg: #1d6443;
+      /* Spacing, radius, shadow, motion */
+      --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px;
+      --r-sm: 6px; --r-md: 10px; --r-lg: 14px;
+      --shadow-1: 0 1px 2px rgba(20, 30, 20, .06), 0 1px 1px rgba(20, 30, 20, .04);
+      --shadow-2: 0 10px 28px rgba(20, 30, 20, .18);
+      --dur-fast: 120ms; --dur-med: 180ms; --ease: cubic-bezier(.2, .7, .2, 1);
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #111512; --surface: #181d19; --surface-2: #20271f; --border: #2c352d;
+        --text: #e8ece7; --text-muted: #9aa59b; --focus: #7fd1ae;
+        --map-land: #1f2520; --map-water: #1d3440; --map-water-edge: #2d5163; --map-sand: #3a3527;
+        --map-wetland: #22301f; --map-green: #232d22; --map-residential: #262a24; --map-road: #3a423a;
+        --map-road-casing: #151915; --map-building: #353c34; --map-tide: #3d8fc0;
+        --patch-gray-lo: #5e665d; --patch-gray-hi: #7c857a; --patch-dim: #394038; --patch-ground: #5a4c35;
+        --warn-bg: #3a2b0c; --warn-fg: #ffd98a; --ok-bg: #173325; --ok-fg: #8fe0b7;
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #111512; --surface: #181d19; --surface-2: #20271f; --border: #2c352d;
+      --text: #e8ece7; --text-muted: #9aa59b; --focus: #7fd1ae;
+      --map-land: #1f2520; --map-water: #1d3440; --map-water-edge: #2d5163; --map-sand: #3a3527;
+      --map-wetland: #22301f; --map-green: #232d22; --map-residential: #262a24; --map-road: #3a423a;
+      --map-road-casing: #151915; --map-building: #353c34; --map-tide: #3d8fc0;
+      --patch-gray-lo: #5e665d; --patch-gray-hi: #7c857a; --patch-dim: #394038; --patch-ground: #5a4c35;
+      --warn-bg: #3a2b0c; --warn-fg: #ffd98a; --ok-bg: #173325; --ok-fg: #8fe0b7;
+      color-scheme: dark;
+    }
+
+    /* ---------------------------------------------------------------------
+       Base & layout
+       ------------------------------------------------------------------- */
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text);
+      font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    button, input { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+    .app-header { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
+      padding: var(--s-4) var(--s-5); border-bottom: 1px solid var(--border); background: var(--surface); }
+    .app-header .crumbs { color: var(--text-muted); font-size: 13px; }
+    .app-header h1 { font-size: 18px; margin: 0; }
+    .badge { display: inline-flex; align-items: center; gap: var(--s-1); padding: 2px var(--s-2);
+      border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .badge.warn { background: var(--warn-bg); color: var(--warn-fg); }
+    .badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
+    .badge.neutral { background: var(--surface-2); color: var(--text-muted); }
+
+    main { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--s-4);
+      padding: var(--s-5); max-width: 1440px; margin: 0 auto; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+      box-shadow: var(--shadow-1); display: flex; flex-direction: column; min-width: 0; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+      padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .card-head h2 { font-size: 15px; margin: 0; }
+    .card-head .hint { color: var(--text-muted); font-size: 12px; }
+    .card-body { padding: var(--s-4); }
+    .span-8 { grid-column: span 8; } .span-4 { grid-column: span 4; } .span-6 { grid-column: span 6; }
+    .stack { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+    @media (max-width: 1080px) { .span-8, .span-4, .span-6 { grid-column: 1 / -1; } }
+
+    /* ---------------------------------------------------------------------
+       Forest explorer card
+       ------------------------------------------------------------------- */
+    .explorer { height: 620px; }
+    .explorer:fullscreen { height: 100vh; border-radius: 0; }
+    .toolbar { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--r-sm);
+      border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 13px;
+      transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+    .btn:hover { background: var(--surface-2); }
+    .btn[aria-pressed="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
+    .map-wrap { position: relative; flex: 1; min-height: 0; }
+    #map { position: absolute; inset: 0; }
+    .map-overlay { position: absolute; left: var(--s-3); top: var(--s-3); display: flex; gap: var(--s-2);
+      flex-wrap: wrap; z-index: 2; pointer-events: none; }
+    .card-foot { display: flex; gap: var(--s-5); flex-wrap: wrap; align-items: center;
+      padding: var(--s-3) var(--s-4); border-top: 1px solid var(--border); font-size: 13px; }
+    .control { display: flex; align-items: center; gap: var(--s-2); }
+    .control output { min-width: 3.5em; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+    .state-legend { display: flex; gap: var(--s-3); color: var(--text-muted); margin-left: auto; flex-wrap: wrap; }
+    .state-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .ln { width: 18px; height: 0; border-top: 2px solid var(--text-muted); }
+    .ln.dashed { border-top-style: dashed; }
+
+    /* Popover */
+    .popover { position: absolute; z-index: 5; width: 290px; max-width: calc(100% - 24px);
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+      border-radius: var(--r-md); box-shadow: var(--shadow-2); padding: var(--s-3);
+      opacity: 0; transform: translateY(4px); pointer-events: none;
+      transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+    .popover.visible { opacity: 1; transform: none; }
+    .popover.pinned { pointer-events: auto; }
+    .pop-head { display: grid; grid-template-columns: 56px 1fr auto; gap: var(--s-3); align-items: start; }
+    .thumb { width: 56px; height: 56px; border-radius: var(--r-sm); display: grid; place-items: center;
+      color: #fff; font-weight: 700; font-size: 18px; position: relative; overflow: hidden; }
+    .thumb small { position: absolute; bottom: 2px; font-size: 8px; font-weight: 500; opacity: .9; }
+    .pop-name { font-weight: 700; font-size: 15px; }
+    .pop-sci { font-style: italic; color: var(--text-muted); font-size: 12px; }
+    .pop-close { border: 0; background: transparent; cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 4px;
+      color: var(--text-muted); visibility: hidden; }
+    .popover.pinned .pop-close { visibility: visible; }
+    .pop-badges { display: flex; gap: var(--s-1); flex-wrap: wrap; margin: var(--s-2) 0; }
+    .popover dl { display: grid; grid-template-columns: auto 1fr; gap: 2px var(--s-3); margin: 0 0 var(--s-2); font-size: 13px; }
+    .popover dt { color: var(--text-muted); } .popover dd { margin: 0; font-variant-numeric: tabular-nums; }
+    .popover ul { margin: 0; padding-left: 18px; font-size: 13px; }
+    .popover .pop-link { display: inline-block; margin-top: var(--s-2); font-size: 12px; color: var(--focus); }
+
+    /* ---------------------------------------------------------------------
+       Side cards
+       ------------------------------------------------------------------- */
+    .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+    .kpi { background: var(--surface-2); border-radius: var(--r-md); padding: var(--s-3); }
+    .kpi .label { font-size: 12px; color: var(--text-muted); }
+    .kpi .value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .kpi .unit { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+
+    .bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; margin-bottom: var(--s-3); background: var(--surface-2); }
+    .bar span { display: block; height: 100%; cursor: pointer; transition: opacity var(--dur-fast) var(--ease); }
+    .bar.has-focus span:not(.is-active) { opacity: .25; }
+    .species-list { list-style: none; margin: 0; padding: 0; }
+    .species-row { width: 100%; display: grid; grid-template-columns: 14px 1fr auto; gap: var(--s-2) var(--s-3);
+      align-items: center; padding: var(--s-2); border: 1px solid transparent; border-radius: var(--r-sm);
+      background: transparent; cursor: pointer; text-align: left;
+      transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+    .species-row:hover, .species-row.is-active { background: var(--surface-2); }
+    .species-row[aria-pressed="true"] { border-color: var(--text-muted); }
+    .swatch { width: 14px; height: 14px; border-radius: 3px; }
+    .species-row .sci { color: var(--text-muted); font-style: italic; font-size: 12px; }
+    .species-row .num { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+    .species-row .num small { display: block; color: var(--text-muted); font-size: 11px; }
+
+    .empty { display: grid; place-items: center; text-align: center; min-height: 160px; color: var(--text-muted);
+      border: 1px dashed var(--border); border-radius: var(--r-md); padding: var(--s-4); }
+    .prov { margin: 0; padding-left: 18px; color: var(--text-muted); font-size: 13px; }
+    .prov b { color: var(--text); font-weight: 600; }
+
+    .error { position: absolute; inset: 0; display: none; place-items: center; padding: var(--s-5);
+      text-align: center; z-index: 6; background: var(--surface); color: #c0392b; }
+
+    @media (max-width: 640px) {
+      main { padding: var(--s-4); } .app-header { padding: var(--s-3) var(--s-4); }
+      .explorer { height: auto; } .map-wrap { flex: none; height: 460px; }
+      .popover { width: 250px; } .popover ul, .popover .pop-link { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <div class="crumbs">Khu vực › Thừa Thiên Huế › Hương Phong</div>
+      <h1>Rú Chá</h1>
+    </div>
+    <span class="badge warn">DEMO DATA: vùng cây là giả lập, chưa khảo sát</span>
+    <span class="badge neutral" id="contextBadge">Nền: …</span>
+  </header>
+
+  <main>
+    <!-- Forest explorer ------------------------------------------------ -->
+    <section class="card explorer span-8" id="explorerCard" aria-labelledby="explorerTitle">
+      <div class="card-head">
+        <div>
+          <h2 id="explorerTitle">Mô hình rừng 2.5D</h2>
+          <div class="hint">Di chuột hoặc chạm vào từng khóm cây để xem loài</div>
+        </div>
+        <div class="toolbar">
+          <button class="btn" type="button" id="btnShowAll" aria-pressed="false">Hiện tất cả màu</button>
+          <button class="btn" type="button" id="btnSat" aria-pressed="false">Ảnh thật</button>
+          <button class="btn" type="button" id="btn3d" aria-pressed="true">3D</button>
+          <button class="btn" type="button" id="btnFull" aria-label="Mở rộng toàn màn hình">⤢ Mở rộng</button>
+        </div>
+      </div>
+      <div class="map-wrap">
+        <div id="map" role="application" aria-label="Mô hình 2.5D khu rừng Rú Chá"></div>
+        <div class="map-overlay"><span class="badge warn" id="exBadge" hidden></span></div>
+        <div class="popover" id="popover" role="dialog" aria-live="polite"></div>
+        <div class="error" id="error"></div>
+      </div>
+      <div class="card-foot">
+        <label class="control">Mực nước triều
+          <input type="range" id="tide" min="0" max="1.5" step="0.05" value="0" aria-describedby="tideOut" />
+          <output id="tideOut">0.00 m</output>
+        </label>
+        <label class="control">Phóng đại chiều cao
+          <input type="range" id="exaggeration" min="1" max="4" step="0.5" value="1" />
+          <output id="exOut">×1</output>
+        </label>
+        <div class="state-legend" aria-label="Chú giải viền">
+          <span><i class="ln"></i>Đã xác minh</span>
+          <span><i class="ln dashed"></i>Chưa xác minh</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Side column ------------------------------------------------------ -->
+    <div class="stack span-4">
+      <section class="card" aria-labelledby="kpiTitle">
+        <div class="card-head"><h2 id="kpiTitle">Tổng quan</h2></div>
+        <div class="card-body kpis">
+          <div class="kpi"><div class="label">Số khóm cây</div><div class="value" id="kpiCount">–</div></div>
+          <div class="kpi"><div class="label">Diện tích tán</div><div class="value"><span id="kpiArea">–</span> <span class="unit">m²</span></div></div>
+          <div class="kpi"><div class="label">Đã xác minh</div><div class="value"><span id="kpiVerified">–</span><span class="unit">%</span></div></div>
+          <div class="kpi"><div class="label">Khóm đang ngập</div><div class="value" id="kpiFlooded">0</div></div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="speciesTitle">
+        <div class="card-head">
+          <h2 id="speciesTitle">Thành phần loài</h2>
+          <span class="hint">theo diện tích tán</span>
+        </div>
+        <div class="card-body">
+          <div class="bar" id="speciesBar" role="img" aria-label="Tỉ lệ diện tích theo loài"></div>
+          <ul class="species-list" id="speciesList"></ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- Bottom row -------------------------------------------------------- -->
+    <section class="card span-6" aria-labelledby="extentTitle">
+      <div class="card-head"><h2 id="extentTitle">Biến động diện tích rừng (L1)</h2><span class="hint">Sentinel-2, theo năm</span></div>
+      <div class="card-body">
+        <div class="empty">Chưa có dữ liệu.<br />Biểu đồ sẽ hiển thị khi có kết quả phân loại extent từ Earth Engine.</div>
+      </div>
+    </section>
+    <section class="card span-6" aria-labelledby="provTitle">
+      <div class="card-head"><h2 id="provTitle">Nguồn dữ liệu</h2></div>
+      <div class="card-body">
+        <ul class="prov">
+          <li><b>Vùng cây:</b> <span id="provPatches">giả lập (seeded random + phân tầng giả định)</span></li>
+          <li><b>Nền ngữ cảnh:</b> <span id="provContext">…</span></li>
+          <li><b>Ảnh thật:</b> Esri World Imagery (chỉ hiển thị, không trích xuất)</li>
+          <li><b>Thông tin loài:</b> tạm thời, cần giảng viên xác nhận</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.addEventListener('error', (e) => {
+      const el = document.getElementById('error');
+      el.textContent = 'Lỗi: ' + (e.message || 'không tải được tài nguyên') + '. Mở DevTools (F12) → Console để xem chi tiết.';
+      el.style.display = 'grid';
+    });
+  </script>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script>
+    if (typeof maplibregl === 'undefined') {
+      document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" />'
+        + '<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"><\/script>');
+    }
+  </script>
+  <!-- Data as .js wrappers so the page also works from file:// -->
+  <script src="data/patches.demo.js"></script>
+  <script src="data/context.js" onerror="/* optional: generated by scripts/fetch-osm-context.mjs */"></script>
+  <script>
+  (function () {
+    // ---------------------------------------------------------------------
+    // Species reference data (placeholder, pending lecturer confirmation).
+    // Will later come from SQLite via /api/species/:id.
+    // ---------------------------------------------------------------------
+    const SPECIES = {
+      excoecaria: { name: 'Giá (Chà)', scientific: 'Excoecaria agallocha', family: 'Euphorbiaceae', zone: 'Giữa',
+        traits: ['Nhựa mủ trắng, độc, gây kích ứng mắt và da', 'Lá đơn, mọc cách, chuyển đỏ khi già', 'Không có rễ chống hay rễ thở rõ rệt'] },
+      acanthus: { name: 'Ô rô', scientific: 'Acanthus ilicifolius', family: 'Acanthaceae', zone: 'Sát mép nước',
+        traits: ['Cây bụi thấp, lá có gai nhọn ở mép', 'Hoa tím nhạt mọc thành bông ở ngọn', 'Mọc thành đám dày trên bùn'] },
+      pandanus: { name: 'Dứa dại', scientific: 'Pandanus tectorius', family: 'Pandanaceae', zone: 'Phía đất liền',
+        traits: ['Rễ chống mọc từ thân xuống đất', 'Lá dài, xếp xoắn ốc, mép có gai', 'Quả kép giống quả dứa'] },
+      derris: { name: 'Cóc kèn', scientific: 'Derris trifoliata', family: 'Fabaceae', zone: 'Rải rác, leo bám',
+        traits: ['Dây leo thân gỗ', 'Lá kép lông chim lẻ, 3–5 lá chét', 'Quả dẹt, mỏng, có cánh hẹp'] },
+    };
+    const SPECIES_KEYS = Object.keys(SPECIES);
+
+    const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const fmt = new Intl.NumberFormat('vi-VN');
+    const errorBox = (msg) => { const el = document.getElementById('error'); el.textContent = msg; el.style.display = 'grid'; };
+
+    if (typeof maplibregl === 'undefined') return errorBox('Không tải được MapLibre GL JS. Kiểm tra kết nối mạng rồi tải lại trang.');
+    if (!window.RUCHA_PATCHES) return errorBox('Thiếu data/patches.demo.js. Chạy: node scripts/generate-demo-patches.mjs');
+
+    // ---------------------------------------------------------------------
+    // Data preparation
+    // ---------------------------------------------------------------------
+    const params = new URLSearchParams(location.search);
+    const urlCenter = (params.get('center') || '').split(',').map(Number);
+    const patches = structuredClone(window.RUCHA_PATCHES);
+    let CENTER = patches.center;
+    if (urlCenter.length === 2 && urlCenter.every(Number.isFinite)) {
+      // Shift the demo patches to a calibrated centre.
+      const [dx, dy] = [urlCenter[0] - CENTER[0], urlCenter[1] - CENTER[1]];
+      for (const f of patches.features) f.geometry.coordinates = f.geometry.coordinates.map((ring) => ring.map(([x, y]) => [x + dx, y + dy]));
+      CENTER = urlCenter;
+    }
+    const grayLo = css('--patch-gray-lo'), grayHi = css('--patch-gray-hi');
+    for (const f of patches.features) {
+      f.properties.verified = f.properties.confidence >= 0.7;
+      f.properties.shade = ((f.properties.fid * 37) % 100) / 100; // stable per-patch variation
+    }
+
+    const mPerDegLat = 111320, mPerDegLng = 111320 * Math.cos((CENTER[1] * Math.PI) / 180);
+    const at = (dx, dy) => [CENTER[0] + dx / mPerDegLng, CENTER[1] + dy / mPerDegLat];
+    const rect = (x0, y0, x1, y1) => [[at(x0, y0), at(x1, y0), at(x1, y1), at(x0, y1), at(x0, y0)]];
+
+    // Context: real OSM data when available, otherwise a clearly-labelled placeholder.
+    const context = window.RUCHA_CONTEXT || buildPlaceholderContext();
+    const isPlaceholder = !window.RUCHA_CONTEXT;
+    const bbox = context.bbox || [...at(-600, -600), ...at(600, 600)];
+
+    function buildPlaceholderContext() {
+      const poly = (kind, coordinates) => ({ type: 'Feature', properties: { kind }, geometry: { type: 'Polygon', coordinates } });
+      const line = (kind, pts) => ({ type: 'Feature', properties: { kind }, geometry: { type: 'LineString', coordinates: pts.map(([x, y]) => at(x, y)) } });
+      const wavy = [];
+      for (let x = -600; x <= 600; x += 40) wavy.push(at(x, -125 + 18 * Math.sin(x / 90)));
+      const lagoon = [[...wavy, at(600, -600), at(-600, -600), wavy[0]]];
+      const features = [
+        poly('water', lagoon),
+        poly('sand', rect(-600, 190, 600, 240)),
+        poly('residential', rect(-600, 240, 600, 600)),
+        poly('farmland', rect(-600, 120, -200, 190)),
+        line('waterway', [[-260, -110], [-240, -40], [-200, 20], [-190, 90]]),
+        line('road', [[-600, 205], [600, 215]]),
+        line('road', [[80, 215], [90, 600]]),
+      ];
+      for (let i = 0; i < 26; i++) {
+        const x = -560 + (i % 13) * 88 + (i * 17) % 20, y = 270 + Math.floor(i / 13) * 70 + (i * 11) % 15;
+        features.push(poly('building', rect(x, y, x + 14 + (i % 3) * 4, y + 10 + (i % 2) * 4)));
+      }
+      return { type: 'FeatureCollection', features };
+    }
+
+    // Tide covers only the intertidal forest area (patch extent + 30 m), not the village.
+    const allCoords = patches.features.flatMap((f) => f.geometry.coordinates[0]);
+    const pad = [30 / mPerDegLng, 30 / mPerDegLat];
+    const [minX, minY, maxX, maxY] = [
+      Math.min(...allCoords.map((c) => c[0])) - pad[0], Math.min(...allCoords.map((c) => c[1])) - pad[1],
+      Math.max(...allCoords.map((c) => c[0])) + pad[0], Math.max(...allCoords.map((c) => c[1])) + pad[1]];
+    const tideArea = { type: 'Feature', properties: {}, geometry: { type: 'Polygon',
+      coordinates: [[[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]]] } };
+
+    document.getElementById('contextBadge').textContent = isPlaceholder ? 'Nền: placeholder (chưa tải OSM)' : 'Nền: OpenStreetMap';
+    document.getElementById('provContext').textContent = isPlaceholder
+      ? 'placeholder vẽ tay. Chạy scripts/fetch-osm-context.mjs để thay bằng OSM thật'
+      : '© OpenStreetMap contributors (ODbL)';
+
+    // ---------------------------------------------------------------------
+    // State
+    // ---------------------------------------------------------------------
+    const state = {
+      showAll: false, satellite: false, is3d: true,
+      exaggeration: 1, tide: 0,
+      focusSpecies: null,   // transient (hover in chart / map)
+      lockedSpecies: null,  // sticky (click in chart)
+      hoveredId: null, selectedId: null,
+    };
+    const activeSpecies = () => state.focusSpecies || state.lockedSpecies;
+
+    // ---------------------------------------------------------------------
+    // Map
+    // ---------------------------------------------------------------------
+    const map = new maplibregl.Map({
+      container: 'map',
+      center: CENTER, zoom: 17.3, pitch: 50, bearing: -18,
+      minZoom: 15.5, maxZoom: 19.5, maxPitch: 65,
+      maxBounds: [[bbox[0], bbox[1]], [bbox[2], bbox[3]]],
+      cooperativeGestures: true,
+      antialias: true,
+      attributionControl: { compact: true },
+      locale: {
+        'CooperativeGesturesHandler.WindowsHelpText': 'Giữ Ctrl + cuộn để phóng to/thu nhỏ bản đồ',
+        'CooperativeGesturesHandler.MacHelpText': 'Giữ ⌘ + cuộn để phóng to/thu nhỏ bản đồ',
+        'CooperativeGesturesHandler.MobileHelpText': 'Dùng hai ngón tay để di chuyển bản đồ',
+      },
+      style: {
+        version: 8,
+        sources: {
+          context: { type: 'geojson', data: context, attribution: isPlaceholder ? '' : '© OpenStreetMap contributors' },
+          sat: { type: 'raster', tileSize: 256, maxzoom: 19,
+            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+            attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' },
+          patches: { type: 'geojson', data: patches, promoteId: 'fid' },
+          tide: { type: 'geojson', data: tideArea },
+        },
+        layers: [],
+      },
+    });
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+    map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+
+    const kindIs = (...kinds) => ['in', ['get', 'kind'], ['literal', kinds]];
+    const polyOnly = ['==', ['geometry-type'], 'Polygon'];
+
+    function patchColorExpr() {
+      const lit = state.showAll ? SPECIES_KEYS : [];
+      const focus = activeSpecies();
+      const speciesColor = ['match', ['get', 'species_id'], ...SPECIES_KEYS.flatMap((k) => [k, css(`--sp-${k}`)]), '#888'];
+      const gray = ['interpolate', ['linear'], ['get', 'shade'], 0, grayLo, 1, grayHi];
+      return ['case',
+        ['any', ['boolean', ['feature-state', 'hover'], false], ['boolean', ['feature-state', 'selected'], false]], speciesColor,
+        ...(focus ? [['==', ['get', 'species_id'], focus], speciesColor, true, css('--patch-dim')] : []),
+        ['in', ['get', 'species_id'], ['literal', lit]], speciesColor,
+        gray];
+    }
+    const k = () => state.exaggeration;
+
+    map.on('load', () => {
+      map.addLayer({ id: 'land', type: 'background', paint: { 'background-color': css('--map-land') } });
+      map.addLayer({ id: 'ctx-green', type: 'fill', source: 'context', filter: ['all', polyOnly, kindIs('farmland', 'vegetation')], paint: { 'fill-color': css('--map-green') } });
+      map.addLayer({ id: 'ctx-residential', type: 'fill', source: 'context', filter: ['all', polyOnly, kindIs('residential')], paint: { 'fill-color': css('--map-residential') } });
+      map.addLayer({ id: 'ctx-wetland', type: 'fill', source: 'context', filter: ['all', polyOnly, kindIs('wetland')], paint: { 'fill-color': css('--map-wetland') } });
+      map.addLayer({ id: 'ctx-sand', type: 'fill', source: 'context', filter: ['all', polyOnly, kindIs('sand')], paint: { 'fill-color': css('--map-sand') } });
+      map.addLayer({ id: 'ctx-water', type: 'fill', source: 'context', filter: ['all', polyOnly, kindIs('water')], paint: { 'fill-color': css('--map-water') } });
+      map.addLayer({ id: 'ctx-water-edge', type: 'line', source: 'context', filter: ['all', polyOnly, kindIs('water')], paint: { 'line-color': css('--map-water-edge'), 'line-width': 1.5 } });
+      map.addLayer({ id: 'ctx-waterway', type: 'line', source: 'context', filter: kindIs('waterway'), paint: { 'line-color': css('--map-water'), 'line-width': ['interpolate', ['linear'], ['zoom'], 15, 2, 19, 10] } });
+      map.addLayer({ id: 'sat', type: 'raster', source: 'sat', layout: { visibility: 'none' },
+        paint: { 'raster-saturation': -1, 'raster-contrast': 0.1, 'raster-opacity': 0.9 } });
+      map.addLayer({ id: 'ctx-road-casing', type: 'line', source: 'context', filter: kindIs('road'), layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': css('--map-road-casing'), 'line-width': ['interpolate', ['linear'], ['zoom'], 15, 3, 19, 14] } });
+      map.addLayer({ id: 'ctx-road', type: 'line', source: 'context', filter: kindIs('road'), layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': css('--map-road'), 'line-width': ['interpolate', ['linear'], ['zoom'], 15, 1.5, 19, 10] } });
+      map.addLayer({ id: 'patch-outline', type: 'line', source: 'patches', filter: ['==', ['get', 'verified'], true],
+        paint: { 'line-color': css('--text-muted'), 'line-width': 1.2 } });
+      map.addLayer({ id: 'patch-outline-unverified', type: 'line', source: 'patches', filter: ['==', ['get', 'verified'], false],
+        paint: { 'line-color': css('--text-muted'), 'line-width': 1.2, 'line-dasharray': [2, 1.5] } });
+      map.addLayer({ id: 'ctx-building', type: 'fill-extrusion', source: 'context', filter: ['all', polyOnly, kindIs('building')],
+        paint: { 'fill-extrusion-color': css('--map-building'), 'fill-extrusion-height': 5, 'fill-extrusion-opacity': 0.9 } });
+      // Ground mound under each patch (ground elevation above mean sea level).
+      map.addLayer({ id: 'patch-ground', type: 'fill-extrusion', source: 'patches',
+        paint: { 'fill-extrusion-color': css('--patch-ground'), 'fill-extrusion-base': 0,
+          'fill-extrusion-height': ['*', ['get', 'ground_m'], k()] } });
+      map.addLayer({ id: 'patches', type: 'fill-extrusion', source: 'patches',
+        paint: {
+          'fill-extrusion-color': patchColorExpr(),
+          'fill-extrusion-base': ['*', ['get', 'ground_m'], k()],
+          'fill-extrusion-height': ['*', ['+', ['get', 'ground_m'], ['get', 'height_m']], k()],
+          'fill-extrusion-opacity': 0.95,
+          'fill-extrusion-vertical-gradient': true,
+        } });
+      map.addLayer({ id: 'tide', type: 'fill-extrusion', source: 'tide', layout: { visibility: 'none' },
+        paint: { 'fill-extrusion-color': css('--map-tide'), 'fill-extrusion-opacity': 0.45, 'fill-extrusion-height': 0 } });
+
+      renderSpeciesPanel();
+      updateKpis();
+    });
+
+    function refreshPatchColors() { if (map.getLayer('patches')) map.setPaintProperty('patches', 'fill-extrusion-color', patchColorExpr()); }
+    function refreshHeights() {
+      map.setPaintProperty('patch-ground', 'fill-extrusion-height', ['*', ['get', 'ground_m'], k()]);
+      map.setPaintProperty('patches', 'fill-extrusion-base', ['*', ['get', 'ground_m'], k()]);
+      map.setPaintProperty('patches', 'fill-extrusion-height', ['*', ['+', ['get', 'ground_m'], ['get', 'height_m']], k()]);
+      map.setPaintProperty('tide', 'fill-extrusion-height', state.tide * k());
+    }
+
+    // ---------------------------------------------------------------------
+    // Popover
+    // ---------------------------------------------------------------------
+    const popover = document.getElementById('popover');
+    function popoverHtml(p) {
+      const sp = SPECIES[p.species_id];
+      const color = css(`--sp-${p.species_id}`);
+      const initials = sp.name.split(' ')[0].slice(0, 2);
+      const floodAt = p.ground_m.toFixed(2);
+      return `
+        <div class="pop-head">
+          <div class="thumb" style="background:${color}" aria-hidden="true">${initials}<small>ảnh: chờ GV</small></div>
+          <div><div class="pop-name">${sp.name}</div><div class="pop-sci">${sp.scientific} · ${sp.family}</div></div>
+          <button class="pop-close" type="button" aria-label="Đóng">×</button>
+        </div>
+        <div class="pop-badges">
+          <span class="badge warn">Nguồn: ${p.source.toUpperCase()}</span>
+          <span class="badge ${p.verified ? 'ok' : 'neutral'}">${p.verified ? 'Đã xác minh' : 'Chưa xác minh'} · ${Math.round(p.confidence * 100)}%</span>
+        </div>
+        <dl>
+          <dt>Mã khóm</dt><dd>${p.id}</dd>
+          <dt>Chiều cao</dt><dd>≈ ${p.height_m} m</dd>
+          <dt>Tán / diện tích</dt><dd>⌀ ${p.crown_diameter_m} m · ${fmt.format(p.area_m2)} m²</dd>
+          <dt>Ngập khi triều</dt><dd>≥ ${floodAt} m ${state.tide >= p.ground_m ? '(đang ngập)' : ''}</dd>
+          <dt>Vị trí điển hình</dt><dd>${sp.zone}</dd>
+        </dl>
+        <ul>${sp.traits.map((t) => `<li>${t}</li>`).join('')}</ul>
+        <a class="pop-link" href="#" aria-disabled="true" title="Sẽ liên kết sang khóa định loại">Nhận dạng loài này →</a>`;
+    }
+    function placePopover(point) {
+      const box = map.getContainer().getBoundingClientRect();
+      const w = popover.offsetWidth, h = popover.offsetHeight, pad = 12, off = 16;
+      let x = point.x + off, y = point.y - h - off;
+      if (x + w > box.width - pad) x = point.x - w - off;
+      if (y < pad) y = point.y + off;
+      popover.style.left = `${Math.max(pad, Math.min(x, box.width - w - pad))}px`;
+      popover.style.top = `${Math.max(pad, Math.min(y, box.height - h - pad))}px`;
+    }
+    function setFeatureFlag(key, id) {
+      const prev = state[key === 'hover' ? 'hoveredId' : 'selectedId'];
+      if (prev === id) return;
+      if (prev !== null) map.setFeatureState({ source: 'patches', id: prev }, { [key]: false });
+      if (id !== null) map.setFeatureState({ source: 'patches', id }, { [key]: true });
+      state[key === 'hover' ? 'hoveredId' : 'selectedId'] = id;
+    }
+    function showPopover(feature, point, pinned) {
+      popover.innerHTML = popoverHtml(feature.properties);
+      popover.classList.add('visible');
+      popover.classList.toggle('pinned', pinned);
+      placePopover(point);
+    }
+    function closePopover() {
+      popover.classList.remove('visible', 'pinned');
+      setFeatureFlag('hover', null);
+      setFeatureFlag('selected', null);
+      setFocus(null);
+    }
+    popover.addEventListener('click', (e) => { if (e.target.closest('.pop-close')) closePopover(); if (e.target.closest('.pop-link')) e.preventDefault(); });
+
+    const canHover = matchMedia('(hover: hover)').matches;
+    map.on('mousemove', 'patches', (e) => {
+      if (!canHover || state.selectedId !== null) return;
+      const f = e.features[0];
+      map.getCanvas().style.cursor = 'pointer';
+      setFeatureFlag('hover', f.id);
+      setFocus(f.properties.species_id, { fromMap: true });
+      showPopover(f, e.point, false);
+    });
+    map.on('mouseleave', 'patches', () => {
+      map.getCanvas().style.cursor = '';
+      if (state.selectedId !== null) return;
+      closePopover();
+    });
+    map.on('click', (e) => {
+      const f = map.queryRenderedFeatures(e.point, { layers: ['patches'] })[0];
+      if (!f) return closePopover();
+      setFeatureFlag('hover', null);
+      setFeatureFlag('selected', f.id);
+      setFocus(f.properties.species_id, { fromMap: true });
+      showPopover(f, e.point, true);
+    });
+    map.on('dragstart', () => { if (state.selectedId !== null) closePopover(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopover(); });
+
+    // ---------------------------------------------------------------------
+    // Species panel (stacked bar + list) with linked highlighting
+    // ---------------------------------------------------------------------
+    const stats = SPECIES_KEYS.map((key) => {
+      const fs = patches.features.filter((f) => f.properties.species_id === key);
+      return { key, count: fs.length, area: fs.reduce((s, f) => s + f.properties.area_m2, 0) };
+    }).sort((a, b) => b.area - a.area);
+    const totalArea = stats.reduce((s, x) => s + x.area, 0);
+
+    function renderSpeciesPanel() {
+      const bar = document.getElementById('speciesBar');
+      const list = document.getElementById('speciesList');
+      bar.innerHTML = stats.map((s) =>
+        `<span data-species="${s.key}" style="width:${(s.area / totalArea) * 100}%;background:${css(`--sp-${s.key}`)}" title="${SPECIES[s.key].name}: ${Math.round((s.area / totalArea) * 100)}%"></span>`).join('');
+      list.innerHTML = stats.map((s) => `
+        <li><button type="button" class="species-row" data-species="${s.key}" aria-pressed="false">
+          <span class="swatch" style="background:${css(`--sp-${s.key}`)}"></span>
+          <span>${SPECIES[s.key].name}<br /><span class="sci">${SPECIES[s.key].scientific}</span></span>
+          <span class="num">${Math.round((s.area / totalArea) * 100)}%<small>${s.count} khóm · ${fmt.format(s.area)} m²</small></span>
+        </button></li>`).join('');
+
+      const speciesOf = (e) => e.target.closest('[data-species]')?.dataset.species;
+      for (const el of [bar, list]) {
+        el.addEventListener('mouseover', (e) => { const s = speciesOf(e); if (s) setFocus(s); });
+        el.addEventListener('focusin', (e) => { const s = speciesOf(e); if (s) setFocus(s); });
+        el.addEventListener('mouseleave', () => setFocus(null));
+        el.addEventListener('focusout', () => setFocus(null));
+        el.addEventListener('click', (e) => {
+          const s = speciesOf(e); if (!s) return;
+          state.lockedSpecies = state.lockedSpecies === s ? null : s;
+          list.querySelectorAll('.species-row').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.species === state.lockedSpecies)));
+          refreshPatchColors(); syncPanelHighlight();
+        });
+      }
+    }
+
+    function setFocus(species, { fromMap = false } = {}) {
+      if (state.focusSpecies === species) return;
+      state.focusSpecies = species;
+      // Hovering a patch highlights the panel but does not dim the map.
+      if (!fromMap) refreshPatchColors();
+      else if (species === null) refreshPatchColors();
+      syncPanelHighlight();
+    }
+    function syncPanelHighlight() {
+      const s = activeSpecies();
+      document.getElementById('speciesBar').classList.toggle('has-focus', !!s);
+      document.querySelectorAll('#speciesBar [data-species], #speciesList .species-row').forEach((el) =>
+        el.classList.toggle('is-active', el.dataset.species === s));
+    }
+
+    // ---------------------------------------------------------------------
+    // KPIs
+    // ---------------------------------------------------------------------
+    function updateKpis() {
+      const n = patches.features.length;
+      document.getElementById('kpiCount').textContent = fmt.format(n);
+      document.getElementById('kpiArea').textContent = fmt.format(totalArea);
+      document.getElementById('kpiVerified').textContent = Math.round((patches.features.filter((f) => f.properties.verified).length / n) * 100);
+      document.getElementById('kpiFlooded').textContent = patches.features.filter((f) => state.tide >= f.properties.ground_m).length;
+    }
+
+    // ---------------------------------------------------------------------
+    // Toolbar & footer controls
+    // ---------------------------------------------------------------------
+    const toggle = (btn, value) => btn.setAttribute('aria-pressed', String(value));
+    document.getElementById('btnShowAll').addEventListener('click', (e) => {
+      state.showAll = !state.showAll; toggle(e.currentTarget, state.showAll); refreshPatchColors();
+    });
+    document.getElementById('btnSat').addEventListener('click', (e) => {
+      state.satellite = !state.satellite; toggle(e.currentTarget, state.satellite);
+      map.setLayoutProperty('sat', 'visibility', state.satellite ? 'visible' : 'none');
+      for (const id of ['ctx-road', 'ctx-road-casing', 'ctx-building']) map.setLayoutProperty(id, 'visibility', state.satellite ? 'none' : 'visible');
+    });
+    document.getElementById('btn3d').addEventListener('click', (e) => {
+      state.is3d = !state.is3d; toggle(e.currentTarget, state.is3d);
+      e.currentTarget.textContent = state.is3d ? '3D' : '2D';
+      map.easeTo({ pitch: state.is3d ? 50 : 0, bearing: state.is3d ? -18 : 0, duration: 600 });
+    });
+    const card = document.getElementById('explorerCard');
+    document.getElementById('btnFull').addEventListener('click', () => {
+      if (document.fullscreenElement) document.exitFullscreen(); else card.requestFullscreen?.();
+    });
+    document.addEventListener('fullscreenchange', () => {
+      document.getElementById('btnFull').textContent = document.fullscreenElement ? '⤡ Thu nhỏ' : '⤢ Mở rộng';
+      setTimeout(() => map.resize(), 50);
+    });
+
+    const tide = document.getElementById('tide');
+    tide.addEventListener('input', () => {
+      state.tide = Number(tide.value);
+      document.getElementById('tideOut').textContent = `${state.tide.toFixed(2)} m`;
+      map.setPaintProperty('tide', 'fill-extrusion-height', state.tide * k());
+      map.setLayoutProperty('tide', 'visibility', state.tide > 0 ? 'visible' : 'none');
+      updateKpis();
+    });
+    const ex = document.getElementById('exaggeration');
+    ex.addEventListener('input', () => {
+      state.exaggeration = Number(ex.value);
+      document.getElementById('exOut').textContent = `×${state.exaggeration}`;
+      const badge = document.getElementById('exBadge');
+      badge.hidden = state.exaggeration === 1;
+      badge.textContent = `Chiều cao đã phóng đại ×${state.exaggeration}`;
+      refreshHeights();
+    });
+
+    window.__explore = { map, state, patches, context };
+  })();
+  </script>
+</body>
+</html>
