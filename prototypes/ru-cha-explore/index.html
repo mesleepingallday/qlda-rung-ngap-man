@@ -75,7 +75,7 @@
       position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); z-index: 4;
       background: var(--panel-bg); padding: 8px 12px; border-radius: 8px; font-size: 13px; display: none;
     }
-    .error { position: absolute; inset: 0; display: none; place-items: center; padding: 24px; text-align: center; z-index: 5; }
+    .error { position: absolute; inset: 0; display: none; place-items: center; padding: 24px; text-align: center; z-index: 5; background: rgba(27,31,29,.92); color: #ffb4a8; font-size: 15px; }
 
     @media (max-width: 640px) {
       .panel { top: auto; bottom: 28px; left: 16px; right: 16px; width: auto; max-height: 45vh; overflow: auto; }
@@ -112,7 +112,22 @@
   <div class="toast" id="toast"></div>
   <div class="error" id="error"></div>
 
+  <script>
+    // Show any runtime error on screen instead of failing silently.
+    window.addEventListener('error', (e) => {
+      const el = document.getElementById('error');
+      el.textContent = 'Lỗi: ' + (e.message || 'không tải được tài nguyên') + ' — mở DevTools (F12) → Console để xem chi tiết.';
+      el.style.display = 'grid';
+    });
+  </script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script>
+    // Fallback CDN if unpkg is blocked.
+    if (typeof maplibregl === 'undefined') {
+      document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" />'
+        + '<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"><\/script>');
+    }
+  </script>
   <script>
     // Species reference data. Will later come from SQLite via /api/species/:id.
     // All entries are placeholders pending confirmation by the lecturer.
