@@ -16,6 +16,8 @@ const st = computed(() => stats.value.bySpecies.find((s) => s.id === id.value))
 const traits = computed(() => TRAIT_ORDER.filter((t) => sp.value.traits[t]).map((t) => ({ key: t, label: TRAIT_LABEL[t], text: sp.value.traits[t]!, art: traitArt(id.value, t) })))
 const tide = ref(0.6)
 const scaleMax = computed(() => Math.ceil(stats.value.maxHeight))
+const habit = computed(() => speciesHabitUrl(id.value))
+const hasArt = computed(() => !!habit.value || !!speciesImageUrl(id.value))
 
 function back() {
   if (window.history.state?.back) router.back()
@@ -40,7 +42,11 @@ function back() {
               <UiBadge v-if="sp.status === 'draft'" tone="warn" size="sm">Bản nháp · chờ giảng viên xác nhận</UiBadge>
             </div>
           </div>
+          <figure v-if="habit" class="habit">
+            <img :src="habit" :alt="`Minh họa dáng cây ${sp.name}`" loading="lazy">
+          </figure>
         </div>
+        <p v-if="hasArt" class="art-note">Hình vẽ minh họa, không phải ảnh thực địa.</p>
       </div>
     </header>
 
@@ -130,9 +136,12 @@ function back() {
 .kicker { font: 600 13px/1.3 var(--font-sans); color: var(--label-2); }
 .name { margin-top: 2px; }
 .sci { font: var(--t-title3); font-weight: 450; font-style: italic; color: var(--label-2); }
-.author { margin-left: 0.35em; font-style: normal; font-size: 15px; color: var(--label-3); }
+.author { margin-left: 0.35em; font-style: normal; font-size: 15px; color: var(--label-2); }
 .alt { margin-top: 4px; font: var(--t-footnote); color: var(--label-2); }
 .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.habit { margin: 0; }
+.habit img { width: 100%; max-width: 420px; height: auto; display: block; margin: 0 auto; }
+.art-note { margin-top: 8px; font: var(--t-caption); color: var(--label-2); }
 
 .body { display: grid; gap: 16px; padding-top: 8px; }
 .col-main, .col-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -172,6 +181,7 @@ function back() {
 @media (min-width: 768px) {
   .hero { padding-top: 24px; }
   .hero-main { flex-direction: row; align-items: center; gap: 24px; }
+  .habit { margin-left: auto; flex: 0 1 360px; }
   .hero-main :deep(.thumb) { width: 140px !important; height: 140px !important; border-radius: 34px !important; }
 }
 @media (min-width: 1024px) {

@@ -19,5 +19,5 @@ const pos = (v: number) => `${(Math.max(0, v) / props.scaleMax) * 100}%`
 .track { position: relative; height: 10px; border-radius: 5px; background: var(--surface-2); }
 .bar { position: absolute; top: 0; bottom: 0; min-width: 6px; border-radius: 5px; }
 .med { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--label); box-shadow: 0 0 0 2px var(--surface); }
-.scale { display: flex; justify-content: space-between; margin-top: 4px; font: 500 11px/1 var(--font-sans); color: var(--label-3); font-variant-numeric: tabular-nums; }
+.scale { display: flex; justify-content: space-between; margin-top: 4px; font: 500 11px/1 var(--font-sans); color: var(--label-2); font-variant-numeric: tabular-nums; }
 </style>

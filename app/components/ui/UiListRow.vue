@@ -3,7 +3,7 @@ import { computed, type Component } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import { NuxtLink } from '#components'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string
   subtitle?: string
   value?: string
@@ -14,7 +14,7 @@ const props = defineProps<{
   button?: boolean
   chevron?: boolean
   destructive?: boolean
-}>()
+}>(), { chevron: undefined })
 defineEmits<{ click: [MouseEvent] }>()
 const tag = computed(() => (props.to ? NuxtLink : props.button ? 'button' : 'div'))
 const interactive = computed(() => !!props.to || props.button)

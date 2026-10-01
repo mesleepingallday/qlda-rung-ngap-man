@@ -49,7 +49,7 @@ const summary = computed(() => {
       <UiSegmented v-model="tab" :options="options" label="Chọn danh sách" class="seg" />
     </AppPageHeader>
 
-    <p v-if="list.length" class="summary">
+    <p v-if="list.length && tab !== 'queue'" class="summary">
       <span><i class="d warn" />{{ summary.pending }} chờ xác minh</span>
       <span><i class="d ok" />{{ summary.verified }} đã xác minh</span>
       <span v-if="summary.needs"><i class="d info" />{{ summary.needs }} cần bổ sung</span>

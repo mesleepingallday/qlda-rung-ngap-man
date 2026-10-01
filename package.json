@@ -10,9 +10,11 @@
     "preview": "nuxt preview",
     "typecheck": "nuxt typecheck",
     "postinstall": "nuxt prepare",
-    "data:patches": "node scripts/generate-demo-patches.mjs",
+    "data:demo": "node scripts/generate-demo-data.mjs",
     "data:context": "node scripts/fetch-osm-context.mjs",
     "icons": "node scripts/build-icons.mjs",
+    "images": "node scripts/optimize-images.mjs",
+    "share-card": "node scripts/build-share-card.mjs",
     "screens": "node scripts/screenshots.mjs"
   },
   "dependencies": {
@@ -30,6 +32,7 @@
     "@types/node": "^22.20.4",
     "osmtogeojson": "^3.0.0-beta.5",
     "playwright-core": "^1.63.0",
+    "sharp": "^0.35.5",
     "typescript": "~5.9.3",
     "vue-tsc": "^3.3.11"
   }

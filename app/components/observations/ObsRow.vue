@@ -58,7 +58,7 @@ const title = computed(() => props.obs.kind === 'species'
 .meta { font: var(--t-footnote); color: var(--label-2); }
 .note { font: var(--t-footnote); color: var(--label-2); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .trail { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.demo { font: 600 10px/1 var(--font-sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-3); }
+.demo { font: 600 10px/1 var(--font-sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-2); }
 @media (max-width: 420px) {
   .obs { grid-template-columns: 48px 1fr; }
   .trail { grid-column: 2; flex-direction: row; align-items: center; }

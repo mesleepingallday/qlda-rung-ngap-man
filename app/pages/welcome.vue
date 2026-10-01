@@ -200,7 +200,7 @@ const nameLabel = computed(() => (role.value === 'advisor' ? 'Họ và tên' : '
 }
 .figure { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
 .dio { width: min(100%, 560px); }
-.visual-caption { font: var(--t-caption2); color: var(--label-3); text-align: center; }
+.visual-caption { font: var(--t-caption2); color: var(--label-2); text-align: center; }
 .welcome:not(.step-0) .visual { display: none; }
 
 /* Panel */
@@ -266,7 +266,7 @@ h1:focus { outline: none; }
 .fields { display: flex; flex-direction: column; gap: 18px; margin-top: 24px; }
 .field { display: flex; flex-direction: column; gap: 8px; }
 .field-label { font: 600 14px/1.3 var(--font-sans); color: var(--label-2); }
-.opt { font-weight: 400; color: var(--label-3); margin-left: 4px; }
+.opt { font-weight: 400; color: var(--label-2); margin-left: 4px; }
 .field input {
   height: 52px;
   padding: 0 16px;

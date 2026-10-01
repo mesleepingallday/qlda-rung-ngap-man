@@ -27,7 +27,7 @@ const pitched = ref(true)
 const focus = ref<SpeciesId | null>(SPECIES_IDS.includes(route.query.species as SpeciesId) ? (route.query.species as SpeciesId) : null)
 const preview = ref<SpeciesId | null>(null)
 const selectedId = ref<string | null>(typeof route.query.patch === 'string' ? route.query.patch : null)
-const detent = ref<'peek' | 'half' | 'full'>(route.query.tide ? 'half' : 'peek')
+const detent = ref<'peek' | 'half' | 'full'>(route.query.tide || route.query.patch ? 'half' : 'peek')
 const layersOpen = ref(false)
 const bearing = ref(-18)
 const mapError = ref<string | null>(null)
@@ -111,9 +111,11 @@ function locate() {
 }
 
 // --- Camera padding: keep the forest clear of panels ----------------------
+const viewportH = ref(typeof window !== 'undefined' ? window.innerHeight : 800)
+onMounted(() => window.addEventListener('resize', () => { viewportH.value = window.innerHeight }))
 const padding = computed(() => regular.value
   ? { top: 24, right: selected.value ? 380 : 24, bottom: 24, left: 404 }
-  : { top: 64, right: 0, bottom: 200, left: 0 })
+  : { top: 64, right: 0, bottom: detent.value === 'peek' ? 200 : Math.round(viewportH.value * 0.54), left: 0 })
 
 const flooded = computed(() => forest.floodedCount(tide.value))
 const SEG_BASEMAP = [{ value: 'map', label: 'Sơ đồ' }, { value: 'satellite', label: 'Vệ tinh' }] as const
@@ -279,7 +281,7 @@ const exString = computed({ get: () => String(exaggeration.value) as '1' | '2' |
 .pills.with-panel { left: 404px; top: 16px; right: 200px; }
 .pill { pointer-events: auto; display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 999px; font: 600 13px/1 var(--font-sans); color: var(--label); text-decoration: none !important; }
 .pill.warn { color: var(--warn); }
-.pill.water { color: var(--water); }
+.pill.water { color: var(--water-text); }
 
 .controls { position: absolute; z-index: 25; top: calc(var(--safe-top) + 12px); right: 12px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
 .regular .controls { top: 16px; right: 16px; }

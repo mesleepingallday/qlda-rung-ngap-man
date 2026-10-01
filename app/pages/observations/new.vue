@@ -141,7 +141,7 @@ const CERTAINTY_OPTIONS = (Object.keys(CERTAINTY) as Certainty[]).map((value) =>
             <ImagePlus aria-hidden="true" :stroke-width="1.8" />
             <span>Chụp hoặc chọn ảnh</span>
           </label>
-          <div v-for="(u, i) in previews" :key="u" class="thumb">
+          <div v-for="(u, i) in previews" :key="u" class="photo-thumb">
             <img :src="u" :alt="`Ảnh ${i + 1}`">
             <button type="button" class="rm" :aria-label="`Xóa ảnh ${i + 1}`" @click="removePhoto(i)"><X :stroke-width="2.6" /></button>
           </div>
@@ -276,7 +276,7 @@ const CERTAINTY_OPTIONS = (Object.keys(CERTAINTY) as Certainty[]).map((value) =>
 .field-label { font: 600 13px/1.3 var(--font-sans); color: var(--label-2); margin-bottom: 6px; }
 
 .photos { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px; }
-.add, .thumb { flex: none; width: 104px; height: 104px; border-radius: 18px; }
+.add, .photo-thumb { flex: none; width: 104px; height: 104px; border-radius: 18px; }
 .add {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   padding: 8px;
@@ -290,8 +290,8 @@ const CERTAINTY_OPTIONS = (Object.keys(CERTAINTY) as Certainty[]).map((value) =>
 }
 .add:focus-within { outline: 2.5px solid var(--focus-ring); outline-offset: 2px; }
 .add svg { width: 28px; height: 28px; }
-.thumb { position: relative; overflow: hidden; background: var(--surface-2); }
-.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-thumb { position: relative; overflow: hidden; background: var(--surface-2); }
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .rm { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: rgba(0, 0, 0, 0.55); color: #fff; }
 .rm svg { width: 14px; height: 14px; }
 .tip { font: var(--t-footnote); color: var(--label-2); }

@@ -69,10 +69,11 @@ function colorExpr(): ExpressionSpecification {
   const gray: ExpressionSpecification = ['interpolate', ['linear'], ['%', ['*', ['get', 'fid'], 37], 100], 0, p.grayLo, 100, p.grayHi]
   const focus = props.focusSpecies ?? props.previewSpecies
   const lit: ExpressionSpecification = ['any', ['boolean', ['feature-state', 'hover'], false], ['boolean', ['feature-state', 'selected'], false]]
+  // case(hovered/selected → colour, [focused species → colour], fallback)
   const parts: unknown[] = ['case', lit, speciesColor]
-  if (focus) parts.push(['==', ['get', 'species_id'], focus], speciesColor, props.focusSpecies ? p.dim : (props.colorMode === 'all' ? speciesColor : gray))
-  else if (props.colorMode === 'all') parts.push(true, speciesColor)
-  parts.push(gray)
+  if (focus) parts.push(['==', ['get', 'species_id'], focus], speciesColor)
+  const fallback = props.focusSpecies ? p.dim : props.colorMode === 'all' ? speciesColor : gray
+  parts.push(fallback)
   return parts as ExpressionSpecification
 }
 const k = () => props.exaggeration

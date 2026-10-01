@@ -45,6 +45,7 @@
 
   /* Water / tide ---------------------------------------------------------- */
   --water: #2f7fb0;
+  --water-text: #266d9c;
   --water-tint: #ddebf3;
 
   /* Species: categorical, validated all-pairs for CVD (protan/deutan
@@ -173,6 +174,7 @@
     --info: #84b4ff;    --info-tint: #142338;
     --danger: #ff8a7f;  --danger-tint: #331614;
     --water: #4ea3d6;
+    --water-text: #7cc0ea;
     --water-tint: #13283a;
     --species-excoecaria: #0e7a50;
     --species-acanthus: #8054d6;
@@ -233,6 +235,7 @@
   --info: #84b4ff;    --info-tint: #142338;
   --danger: #ff8a7f;  --danger-tint: #331614;
   --water: #4ea3d6;
+  --water-text: #7cc0ea;
   --water-tint: #13283a;
   --species-excoecaria: #0e7a50;
   --species-acanthus: #8054d6;

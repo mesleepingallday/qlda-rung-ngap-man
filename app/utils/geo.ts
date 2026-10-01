@@ -23,19 +23,25 @@ export function distanceMetres(a: LngLat, b: LngLat) {
   return Math.hypot((a[0] - b[0]) * m.lng, (a[1] - b[1]) * m.lat)
 }
 
-/** Area-weighted centroid of a closed ring (falls back to vertex mean). */
+/**
+ * Area-weighted centroid of a closed ring (falls back to vertex mean).
+ * Computed relative to the first vertex: raw lng × lat products (~1 780)
+ * would cancel catastrophically for patch-sized areas (~1e-8 deg²).
+ */
 export function ringCentroid(ring: LngLat[]): LngLat {
+  const [ox, oy] = ring[0]!
   let a = 0, cx = 0, cy = 0
   for (let i = 0, n = ring.length - 1; i < n; i++) {
-    const [x0, y0] = ring[i]!, [x1, y1] = ring[i + 1]!
+    const x0 = ring[i]![0] - ox, y0 = ring[i]![1] - oy
+    const x1 = ring[i + 1]![0] - ox, y1 = ring[i + 1]![1] - oy
     const f = x0 * y1 - x1 * y0
     a += f; cx += (x0 + x1) * f; cy += (y0 + y1) * f
   }
-  if (Math.abs(a) < 1e-14) {
+  if (Math.abs(a) < 1e-18) {
     const n = ring.length
     return [ring.reduce((s, p) => s + p[0], 0) / n, ring.reduce((s, p) => s + p[1], 0) / n]
   }
-  return [cx / (3 * a), cy / (3 * a)]
+  return [ox + cx / (3 * a), oy + cy / (3 * a)]
 }
 
 /** Andrew's monotone-chain convex hull (counter-clockwise, not closed). */

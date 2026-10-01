@@ -9,7 +9,7 @@ const props = withDefaults(defineProps<{
   size?: 'sm' | 'md' | 'lg'
   to?: string
   pressed?: boolean
-}>(), { variant: 'gray', size: 'md' })
+}>(), { variant: 'gray', size: 'md', pressed: undefined })
 const tag = computed(() => (props.to ? NuxtLink : 'button'))
 </script>
 

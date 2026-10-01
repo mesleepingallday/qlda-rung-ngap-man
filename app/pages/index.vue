@@ -104,7 +104,7 @@ const ord = (k: string) => ({ order: Math.max(0, ORDER[profile.value.role].index
       </section>
 
       <!-- Zonation & tide -->
-      <section class="transect card pad" :style="ord('transect')" aria-labelledby="tr-h">
+      <section class="tr-card card pad" :style="ord('transect')" aria-labelledby="tr-h">
         <div class="section-head">
           <h2 id="tr-h">Mặt cắt và thủy triều</h2>
           <NuxtLink to="/explore?tide=1" class="link">Xem trên bản đồ</NuxtLink>
@@ -265,7 +265,7 @@ const ord = (k: string) => ({ order: Math.max(0, ORDER[profile.value.role].index
   .kpis { grid-area: kpis; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
   .me { display: none; }
   .comp { grid-area: comp; }
-  .transect { grid-area: tran; }
+  .tr-card { grid-area: tran; }
   .obs { grid-area: obs; }
   .ext { grid-area: ext; }
 }

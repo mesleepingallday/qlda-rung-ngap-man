@@ -38,7 +38,7 @@ function openReview(d: 'verified' | 'needs_info') {
   updatePatch.value = true
   reviewOpen.value = true
 }
-const patchMatches = computed(() => !!near.value && near.value.distance <= 15 && reviewSpecies.value === near.value.patch.species_id)
+const patchMatches = computed(() => !!near.value && near.value.distance <= 20 && reviewSpecies.value === near.value.patch.species_id)
 const canSubmitReview = computed(() => decision.value === 'needs_info' ? comment.value.trim().length > 0 : obs.value?.kind !== 'species' || !!reviewSpecies.value)
 function submitReview() {
   const o = obs.value
@@ -163,7 +163,7 @@ function back() {
             </button>
           </div>
           <p v-if="obs.species_id && reviewSpecies && reviewSpecies !== obs.species_id" class="r-note">Bạn đang sửa loài từ {{ SPECIES[obs.species_id].name }} thành {{ SPECIES[reviewSpecies].name }}.</p>
-          <label v-if="near && near.distance <= 15" class="r-check">
+          <label v-if="near && near.distance <= 20" class="r-check">
             <input v-model="updatePatch" type="checkbox" :disabled="!patchMatches">
             <span>
               Đồng thời đánh dấu khóm {{ near.patch.id }} là đã xác minh
@@ -210,7 +210,7 @@ function back() {
 }
 .cond-ic { width: 80px; height: 80px; display: grid; place-items: center; border-radius: 24px; background: var(--surface-2); color: var(--label-2); }
 .cond-ic svg { width: 40px; height: 40px; }
-.no-photo { font: var(--t-caption); color: var(--label-3); }
+.no-photo { font: var(--t-caption); color: var(--label-2); }
 .dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
 .dots button { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); }
 .dots button[aria-selected='true'] { background: #fff; }
@@ -240,7 +240,7 @@ function back() {
 
 .review { display: flex; flex-direction: column; gap: 14px; }
 .field-label { font: 600 13px/1.3 var(--font-sans); color: var(--label-2); }
-.opt { font-weight: 400; color: var(--label-3); }
+.opt { font-weight: 400; color: var(--label-2); }
 .r-species { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .r-sp { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--surface-2); font: 600 15px/1.2 var(--font-sans); text-align: left; }
 .r-sp[aria-checked='true'] { background: var(--accent-tint); box-shadow: inset 0 0 0 2px var(--accent); }

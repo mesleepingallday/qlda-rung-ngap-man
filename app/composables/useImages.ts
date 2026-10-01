@@ -17,3 +17,8 @@ export function speciesImageUrl(id: SpeciesId): string | null {
 export function onboardingImageUrl(name: string): string | null {
   return onboarding[name] ?? null
 }
+
+/** Optional whole-plant illustration (species/<id>-habit.webp). */
+export function speciesHabitUrl(id: SpeciesId): string | null {
+  return species[`${id}-habit`] ?? null
+}

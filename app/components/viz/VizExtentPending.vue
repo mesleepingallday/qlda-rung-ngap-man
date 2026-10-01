@@ -25,7 +25,7 @@ const years = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
 .extent > * { grid-area: 1 / 1; }
 .frame { width: 100%; height: 100%; opacity: 0.85; align-self: stretch; }
 .grid { stroke: var(--chart-grid); stroke-width: 1; }
-.tick { fill: var(--label-3); font: 500 8px/1 var(--font-sans); }
+.tick { fill: var(--label-2); font: 500 8px/1 var(--font-sans); }
 .msg {
   position: relative;
   padding-bottom: 22px !important;

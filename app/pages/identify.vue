@@ -110,7 +110,7 @@ const matched = computed(() => {
               :aria-checked="chosen === o.id"
               @click="pick(o.id)"
             >
-              <span class="art"><CharacterArt :art="o.art" /></span>
+              <span class="o-art"><CharacterArt :art="o.art" /></span>
               <span class="o-label">{{ o.label }}</span>
               <span v-if="o.hint" class="o-hint">{{ o.hint }}</span>
               <span class="o-check" aria-hidden="true"><Check :stroke-width="3" /></span>
@@ -245,7 +245,7 @@ const matched = computed(() => {
 .option:hover { box-shadow: var(--shadow-md), inset 0 0 0 1.5px var(--accent); }
 .option:active { transform: scale(0.97); }
 .option[aria-checked='true'] { background: var(--accent-tint); box-shadow: inset 0 0 0 2px var(--accent); }
-.art { width: 72px; height: 72px; color: var(--accent-text); margin-bottom: 6px; }
+.o-art { width: 72px; height: 72px; color: var(--accent-text); margin-bottom: 6px; }
 .o-label { font: var(--t-headline); font-size: 16px; }
 .o-hint { font: var(--t-footnote); color: var(--label-2); }
 .o-check { position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: var(--accent-ink); opacity: 0; transform: scale(0.6); transition: all var(--dur-2) var(--ease-spring); }

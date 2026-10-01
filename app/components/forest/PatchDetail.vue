@@ -103,7 +103,7 @@ function toggleVerified() {
 .tide svg { width: 20px; height: 20px; flex: none; color: var(--water); margin-top: 1px; }
 .tide-main { font: 600 14px/1.35 var(--font-sans); }
 .tide-sub { font: var(--t-footnote); color: var(--label-2); }
-.tide.wet .tide-sub { color: var(--water); font-weight: 600; }
+.tide.wet .tide-sub { color: var(--water-text); font-weight: 600; }
 .provenance { font: var(--t-footnote); color: var(--label-2); }
 .actions { display: flex; flex-direction: column; gap: 8px; }
 </style>

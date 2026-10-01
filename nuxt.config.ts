@@ -31,6 +31,7 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/icons/icon.svg' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/icons/favicon-32.png' },
         { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png' },
         { rel: 'manifest', href: '/manifest.webmanifest' },
       ],
@@ -48,6 +49,13 @@ export default defineNuxtConfig({
   components: [{ path: '~/components', pathPrefix: false }],
 
   router: { options: { hashMode } },
+
+  runtimeConfig: {
+    public: {
+      // Static previews (e.g. hash-routed builds) skip the service worker.
+      noSw: process.env.NUXT_PUBLIC_NO_SW === '1' || hashMode,
+    },
+  },
 
   typescript: { strict: true },
 

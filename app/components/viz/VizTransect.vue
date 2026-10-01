@@ -157,7 +157,7 @@ const tableRows = computed(() => SPECIES_BY_ZONE.map((id) => {
 .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .legend li { display: inline-flex; align-items: center; gap: 6px; font: 500 13px/1.3 var(--font-sans); color: var(--label-2); transition: opacity var(--dur-2); }
-.legend li.dim { opacity: 0.4; }
+.legend li.dim .dot { opacity: 0.25; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .view-toggle { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; background: var(--surface-2); font: 500 13px/1 var(--font-sans); color: var(--label); }
 .view-toggle svg { width: 15px; height: 15px; }
@@ -171,7 +171,7 @@ svg { display: block; overflow: visible; cursor: crosshair; touch-action: pan-y;
 .dots circle.hot { stroke: var(--label); stroke-width: 2; }
 .water { fill: var(--water); fill-opacity: 0.2; transition: y var(--dur-2) var(--ease-out), height var(--dur-2) var(--ease-out); }
 .waterline { stroke: var(--water); stroke-width: 2; }
-.water-label { fill: var(--water); font: 650 11px/1 var(--font-sans); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.water-label { fill: var(--water-text); font: 650 11px/1 var(--font-sans); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
 .axis .axis-title { fill: var(--label-2); font: 600 11px/1 var(--font-sans); }
 .ends { display: flex; justify-content: space-between; margin: 2px 12px 0 40px; font: 500 11px/1.3 var(--font-sans); color: var(--label-2); }
 
@@ -203,7 +203,7 @@ svg { display: block; overflow: visible; cursor: crosshair; touch-action: pan-y;
 .tide { margin-top: 14px; }
 .tide-head { display: flex; justify-content: space-between; align-items: baseline; }
 .tide-label { font: 600 14px/1.3 var(--font-sans); }
-.tide-value { font: 650 15px/1.3 var(--font-sans); color: var(--water); }
+.tide-value { font: 650 15px/1.3 var(--font-sans); color: var(--water-text); }
 .tide-summary { font: var(--t-subhead); }
 .tide-summary strong { font-weight: 700; }
 .caveat { margin-top: 8px; font: var(--t-caption); color: var(--label-2); }

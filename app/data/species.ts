@@ -84,12 +84,12 @@ export const SPECIES: Record<SpeciesId, Species> = {
     summary:
       'Cây bụi thấp, mọc thành đám dày trên bùn ở nơi ngập triều thường xuyên. Dễ nhận ra nhờ lá có gai và bông hoa tím nhạt.',
     traits: {
-      form: 'Cây bụi thấp, thường cao dưới 2 m, mọc thành đám.',
+      form: 'Cây bụi thấp, thường cao dưới 2 m, mọc thành đám.',
       leaf: 'Lá đơn, mọc đối, phiến lá dày và cứng.',
       margin: 'Mép lá lượn thùy, mỗi thùy kết thúc bằng một gai nhọn.',
       sap: 'Không có nhựa mủ trắng.',
       flower: 'Hoa màu tím nhạt, xếp thành bông ở ngọn cành.',
-      fruit: 'Quả nang hình thuôn, dài khoảng 2–3 cm.',
+      fruit: 'Quả nang hình thuôn, dài khoảng 2–3 cm.',
     },
     safety: { level: 'caution', text: 'Mép lá có gai nhọn. Mặc quần áo dài và đi chậm khi qua các đám ô rô.' },
     confusions: [
