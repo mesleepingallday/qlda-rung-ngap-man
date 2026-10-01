@@ -2,7 +2,7 @@ node_modules/
 .nuxt/
 .output/
 .data/
-dist/
+dist
 .env
 *.log
 app/assets/images/_originals/
