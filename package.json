@@ -1,0 +1,39 @@
+{
+  "name": "rung-ngap-man-hue",
+  "private": true,
+  "type": "module",
+  "description": "Rừng ngập mặn Huế: explore, identify and verify the Rú Chá mangrove forest (web + installable mobile app).",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck",
+    "postinstall": "nuxt prepare",
+    "data:demo": "node scripts/generate-demo-data.mjs",
+    "data:context": "node scripts/fetch-osm-context.mjs",
+    "icons": "node scripts/build-icons.mjs",
+    "images": "node scripts/optimize-images.mjs",
+    "share-card": "node scripts/build-share-card.mjs",
+    "screens": "node scripts/screenshots.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@lucide/vue": "^1.49.0",
+    "idb-keyval": "^6.3.0",
+    "maplibre-gl": "^6.11.2",
+    "nuxt": "^4.5.2",
+    "vue": "^3.5.40",
+    "vue-router": "^5.2.0"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@turf/bbox-clip": "^7.4.0",
+    "@types/node": "^22.20.4",
+    "osmtogeojson": "^3.0.0-beta.5",
+    "playwright-core": "^1.63.0",
+    "sharp": "^0.35.5",
+    "typescript": "~5.9.3",
+    "vue-tsc": "^3.3.11"
+  }
+}
