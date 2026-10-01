@@ -112,7 +112,9 @@ function locate() {
 
 // --- Camera padding: keep the forest clear of panels ----------------------
 const viewportH = ref(typeof window !== 'undefined' ? window.innerHeight : 800)
-onMounted(() => window.addEventListener('resize', () => { viewportH.value = window.innerHeight }))
+const onResize = () => { viewportH.value = window.innerHeight }
+onMounted(() => window.addEventListener('resize', onResize))
+onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 const padding = computed(() => regular.value
   ? { top: 24, right: selected.value ? 380 : 24, bottom: 24, left: 404 }
   : { top: 64, right: 0, bottom: detent.value === 'peek' ? 200 : Math.round(viewportH.value * 0.54), left: 0 })

@@ -35,10 +35,11 @@ async function install() {
 }
 
 const resetOpen = ref(false)
+const baseURL = useRuntimeConfig().app.baseURL || '/'
 function resetAll() {
   clearPersisted()
   resetOpen.value = false
-  window.location.assign((useRuntimeConfig().app.baseURL || '/') + 'welcome')
+  window.location.assign(baseURL + 'welcome')
 }
 </script>
 

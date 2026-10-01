@@ -39,10 +39,10 @@ const raw = shallowRef<RawData | null>(null)
 const status = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
 const error = ref<string | null>(null)
 let inflight: Promise<void> | null = null
+let baseURL = '/'
 
 function asset(path: string) {
-  const base = useRuntimeConfig().app.baseURL || '/'
-  return base.replace(/\/$/, '') + path
+  return baseURL.replace(/\/$/, '') + path
 }
 
 async function load() {
@@ -77,6 +77,8 @@ const median = (xs: number[]) => {
 }
 
 export function useForest() {
+  // Read in setup context; load() may later run after an await.
+  if (status.value === 'idle') baseURL = useRuntimeConfig().app.baseURL || '/'
   if (import.meta.client && status.value === 'idle') load()
   const overrides = persisted<Record<string, PatchOverride>>('patch-overrides', () => ({}))
 

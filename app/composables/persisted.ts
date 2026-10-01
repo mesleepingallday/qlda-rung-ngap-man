@@ -1,7 +1,10 @@
-import { ref, watch, type Ref } from 'vue'
+import { effectScope, ref, watch, type Ref } from 'vue'
 
 const PREFIX = 'rnm:'
 const cache = new Map<string, Ref<unknown>>()
+// Watchers live in a detached scope: whichever component calls persisted()
+// first may unmount, but saving must keep working for the whole session.
+const scope = effectScope(true)
 
 /**
  * A ref mirrored to localStorage. Storage can be unavailable (private mode,
@@ -19,9 +22,9 @@ export function persisted<T>(key: string, initial: () => T): Ref<T> {
     value = initial()
   }
   const r = ref(value) as Ref<T>
-  watch(r, (v) => {
+  scope.run(() => watch(r, (v) => {
     try { localStorage.setItem(PREFIX + key, JSON.stringify(v)) } catch { /* quota or blocked */ }
-  }, { deep: true })
+  }, { deep: true }))
   cache.set(key, r as Ref<unknown>)
   return r
 }
